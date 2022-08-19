@@ -548,6 +548,7 @@ function instalacaoPadrao()
         sleep 5
     fi
     # 04
+    #
     # 05 - Ajustes finais.
     instalarMonitoramentoPostgres
     if [ $? -eq 0 ]
