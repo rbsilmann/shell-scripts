@@ -143,6 +143,7 @@ function gerenciadorPacotes()
 function instalarUtilitarios()
 {
     # Função que será responsável por gerir os pacotes que serão instalados.
+    # Essa função só deve ser chamada caso a função gerenciadorPacotes retorne 0.
     $GERENCIADOR update -y && \
     $GERENCIADOR install -y mlocate \
                             curl \
@@ -163,7 +164,7 @@ function instalarUtilitarios()
 
 function particoesSistema()
 {
-    # O código abaixo testa a existência de partições chamadas data e dados.
+    # O código abaixo testa a existência de partições chamadas data ou dados.
     # O retorno 0 corresponde a existência dessas partições, já o retorno 1 corresponde a ausência delas.
     if [ 1 -eq 1 ] 
     then
@@ -189,6 +190,7 @@ function particoesSistema()
 function instalarPostgres()
 {
     # Instalação do PostgreSQL 12.
+    # Essa função só pode ser chamada caso o retorno da gerenciadorPacotes seja 0.
     $GERENCIADOR install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$VERSAO-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     if [ $VERSAO -gt 7 ]
     then
@@ -196,6 +198,9 @@ function instalarPostgres()
     fi
     $GERENCIADOR install -y postgresql12-server \
                             postgresql12-contrib
+    # A função chamada aqui verifica a existência de partições de dados personalizadas
+    # caso ele encontre /data ou /dados, utilizará elas para realizar a instalação do
+    # cluster PostgreSQL.
     particoesSistema
     if [ $? -eq 0 ]
     then
@@ -205,12 +210,15 @@ function instalarPostgres()
         chmod -R 770 $DIRETORIO/pgsql
         mkdir /etc/systemd/system/postgresql-12.service.d
         echo -e "[Service]\nEnvironment=PGDATA=$DIRETORIO/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
+        clear
         azul "Inicializando o banco de dados..."
         sleep 5
         /usr/pgsql-12/bin/postgresql-12-setup initdb
         systemctl enable --now postgresql-12
         return 0
     else
+        # Caso ele não encontre a partição /data ou /dados ele disponibiliza que seja personalizado
+        # o local da instalação.
         menuInstalarPostgres
         if [ $? -eq 0 ] 
         then
@@ -242,6 +250,7 @@ function menuInstalarPostgres()
             chmod -R 770 /home/pgsql
             mkdir /etc/systemd/system/postgresql-12.service.d
             echo -e "[Service]\nEnvironment=PGDATA=/home/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
+            clear
             return 0
         ;;
         3)  readBranco "Digite apenas o nome do diretório na raiz sem caracteres especiais: "
@@ -256,6 +265,7 @@ function menuInstalarPostgres()
                 chown -R postgres:postgres $DIRETORIO/pgsql
                 chmod -R 770 $DIRETORIO/pgsql
                 echo -e "[Service]\nEnvironment=PGDATA=$DIRETORIO/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
+                clear
                 return 0
             fi
         ;;
@@ -437,6 +447,7 @@ function configurarFirewall()
     fi
 }
 
+# A instalação padrão gera um relatório de sucessos e falhas em /tmp/relatorio_instalacao.txt
 function instalacaoPadrao()
 {
     # 01 - Boas-vindas.
