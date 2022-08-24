@@ -6,6 +6,12 @@ PORTA="8745"
 DATA=$(date +%H%M%d%m%y)
 NOME="dump_database_$DATA"
 
+if [ ! -d $DIRETORIO ] 
+then
+    mkdir -p $DIRETORIO
+    chmod 770 $DIRETORIO
+fi
+
 # Executando o backup e removendo arquivos com mais de 7 dias.
 pg_dump -U postgres -p $PORTA -d vr -Fc > $DIRETORIO/$NOME.backup 2> $DIRETORIO/$NOME.log
 if [ $? -ne 0 ] 
