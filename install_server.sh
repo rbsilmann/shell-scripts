@@ -490,9 +490,9 @@ function criarRoles()
     fi
 }
 
-# A instalação padrão gera um relatório de sucessos e falhas em /tmp/relatorio_instalacao.txt
 function instalacaoPadrao()
 {
+    # A instalação padrão gera um relatório de sucessos e falhas em /tmp/relatorio_instalacao.txt
     # 01 - Boas-vindas.
     amarelo "Olá, bem vindo ao assistente de configuração!"
     sleep 5
