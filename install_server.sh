@@ -355,7 +355,7 @@ function alterarHostBasedAuth()
     PORTA=$1
     echo "PORTA=$PORTA" | tee -a /tmp/porta
     DIRETORIODATA=$(runuser -l postgres -c 'source /tmp/porta && /usr/pgsql-12/bin/psql -p $PORTA -c "SELECT setting FROM pg_settings"' | grep pg_hba.conf)
-    REDES=$(hostname -I | sed 's/ /\n/g' | wc -l | bc)
+    REDES=$(hostname -I | sed 's/ /\n/g' | grep -v ":" | wc -l | bc)
     CONTADOR=1
     if [ $REDES -gt 2 ]; then
         while [ $CONTADOR -lt $REDES ]; do
@@ -439,6 +439,46 @@ function configurarFirewall()
     sleep 2
     systemctl enable smb nmb firewalld
     systemctl restart smb nmb firewalld
+    if [ $? -eq 0 ] 
+    then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function alterarPorta()
+{
+    # Essa função recebe um parâmetro para realizar a troca da porta padrão, ela atua somente quando o arquivo postgresql.conf
+    # não sofreu nenhuma alteração.
+    PORTA=$1
+    sed -i "/#port/s/5432/$PORTA/g" $DIRETORIO/pgsql/12/main/postgresql.conf
+    sed -i "/#port/s/#port/port/g" $DIRETORIO/pgsql/12/main/postgresql.conf
+    if [ $? -eq 0 ] 
+    then
+        return 0
+    else
+        return 1
+    fi
+    systemctl restart postgresql-12
+}
+
+function criarRoles()
+{
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE DATABASE vr;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE ROLE pgsql LOGIN SUPERUSER INHERIT CREATEDB CREATEROLE REPLICATION;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER arcos;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER arquitetura;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER desenvolvimento;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER implantacao;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER mercafacil;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER mixfiscal;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER pagpouco;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER projeto;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER suporte;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER vr;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER yandeh;"'
+    runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE USER smarket;"'
     if [ $? -eq 0 ] 
     then
         return 0
@@ -536,6 +576,16 @@ function instalacaoPadrao()
         echo "Instalação do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
         clear
+        azul "Criando database inicial e roles..."
+        criarRoles
+        if [ $? -eq 0 ]
+        then
+            echo "Criação de database e roles: OK" >> /tmp/relatorio_instalacao.txt
+        else
+            echo "Criação de database e roles: FALHOU" >> /tmp/relatorio_instalacao.txt
+        fi
+        sleep 5
+        clear
         azul "Aguarde enquanto ajustamos o tunning."
         sleep 5
         tunningConfiguracaoPostgres 5432
@@ -587,6 +637,15 @@ function instalacaoPadrao()
         sleep 5
     else
         echo "Configuração do pg_hba.conf: FALHOU" >> /tmp/relatorio_instalacao.txt
+        sleep 5
+    fi
+    alterarPorta 8745
+    if [ $? -eq 0 ]
+    then
+        echo "Configuração da porta: OK" >> /tmp/relatorio_instalacao.txt
+        sleep 5
+    else
+        echo "Configuração do porta: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
     # 05
