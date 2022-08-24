@@ -356,6 +356,7 @@ function alterarHostBasedAuth()
     # utilizando o método md5.
     PORTA=$1
     echo "PORTA=$PORTA" | tee -a /tmp/porta
+    clear
     DIRETORIODATA=$(runuser -l postgres -c 'source /tmp/porta && /usr/pgsql-12/bin/psql -p $PORTA -c "SELECT setting FROM pg_settings"' | grep pg_hba.conf)
     REDES=$(hostname -I | sed 's/ /\n/g' | grep -v ":" | wc -l | bc)
     CONTADOR=1
