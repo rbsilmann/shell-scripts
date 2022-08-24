@@ -265,6 +265,7 @@ function menuInstalarPostgres()
                 mkdir -p $DIRETORIO/pgsql/12/main
                 chown -R postgres:postgres $DIRETORIO/pgsql
                 chmod -R 770 $DIRETORIO/pgsql
+                mkdir /etc/systemd/system/postgresql-12.service.d
                 echo -e "[Service]\nEnvironment=PGDATA=$DIRETORIO/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
                 clear
                 return 0
