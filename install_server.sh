@@ -261,6 +261,7 @@ function menuInstalarPostgres()
                 sleep 5
                 menuInstalarPostgres
             else
+                DIRETORIO=/$DIRETORIO
                 mkdir -p $DIRETORIO/pgsql/12/main
                 chown -R postgres:postgres $DIRETORIO/pgsql
                 chmod -R 770 $DIRETORIO/pgsql
@@ -576,6 +577,16 @@ function instalacaoPadrao()
         echo "Instalação do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
         clear
+        azul "Aguarde enquanto ajustamos o tunning."
+        sleep 5
+        tunningConfiguracaoPostgres 5432
+        if [ $? -eq 0 ]
+        then
+            echo "Tunning do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
+        else
+            echo "Tunning do PostgreSQL: FALHOU" >> /tmp/relatorio_instalacao.txt
+        fi
+        clear
         azul "Criando database inicial e roles..."
         criarRoles
         if [ $? -eq 0 ]
@@ -586,15 +597,6 @@ function instalacaoPadrao()
         fi
         sleep 5
         clear
-        azul "Aguarde enquanto ajustamos o tunning."
-        sleep 5
-        tunningConfiguracaoPostgres 5432
-        if [ $? -eq 0 ]
-        then
-            echo "Tunning do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
-        else
-            echo "Tunning do PostgreSQL: FALHOU" >> /tmp/relatorio_instalacao.txt
-        fi
     else
         echo "Instalação do PostgreSQL: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
