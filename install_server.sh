@@ -216,6 +216,7 @@ function instalarPostgres()
         systemctl enable --now postgresql-12
         return 0
     else
+        clear
         menuInstalarPostgres
         if [ $? -eq 0 ] 
         then
