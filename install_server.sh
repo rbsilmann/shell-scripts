@@ -183,9 +183,9 @@ function verificarParticao()
         if [ $PARTICAO -gt 0 ]
         then
             return 0
+        else
+            return 1
         fi
-    else
-        return 1
     fi
 }
 
@@ -452,8 +452,8 @@ function alterarPorta()
 {
     PORTA=$1
     DIRETORIODATA=$(runuser -l postgres -c 'source /tmp/porta && /usr/pgsql-12/bin/psql -p $PORTA -c "SELECT setting FROM pg_settings"' | grep postgresql.conf)
-    sed -i "/#port/s/5432/$PORTA/g" $DIRETORIODATA/postgresql.conf
-    sed -i "/#port/s/#port/port/g" $DIRETORIODATA/postgresql.conf
+    sed -i "/#port/s/5432/$PORTA/g" $DIRETORIODATA
+    sed -i "/#port/s/#port/port/g" $DIRETORIODATA
     if [ $? -eq 0 ] 
     then
         return 0
