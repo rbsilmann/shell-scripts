@@ -568,6 +568,7 @@ function instalacaoPadrao()
     instalarPostgres
     if [ $? -eq 0 ]
     then
+        echo ""
         textoVerde "Instalação do PostgreSQL realizada corretamente."
         echo "Instalação do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
