@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# Todas as funções aqui desenvolvidas trabalham utilizando o retorno como método de validação do sucesso
-# ou da falha de alguma função, leve isso em consideração para a implementação de novos recursos.
-
-# Desenvolvido e testado para distribuições Linux RedHat-Based 7+.
+# Desenvolvido e testado apenas para distribuições RHEL-Based (7+).
 
 function SET()
 {
@@ -19,42 +16,42 @@ function SETR()
     echo -e -n "\n\033[1;$cor$esp$txt\033[0m"
 }
 
-function preto()
+function textoPreto()
 {
     txt=$@;cor="30m";SET; 
 }
 
-function vermelho()
+function textoVermelho()
 {
     txt=$@;cor="31m";SET; 
 }
 
-function verde()
+function textoVerde()
 {
     txt=$@;cor="32m";SET; 
 }
 
-function amarelo()
+function textoAmarelo()
 {
     txt=$@;cor="33m";SET; 
 }
 
-function azul()
+function textoAzul()
 {
     txt=$@;cor="34m";SET; 
 }
 
-function purple()
+function textoPurpura()
 {
     txt=$@;cor="35m";SET; 
 }
 
-function ciano()
+function textoCiano()
 {
     txt=$@;cor="36m";SET; 
 }
 
-function branco()
+function textoBranco()
 {
     txt=$@;cor="37m";SET; 
 }
@@ -64,51 +61,52 @@ function readBranco()
     txt=$@;cor="37m";SETR; 
 }
 
-function testeConexao()
+# Função testarConexao é responsável por realizar um ping para o endereço "8.8.8.8".
+function testarConexao()
 {
-    # O código realiza um teste simples de ping, caso o teste de ping falhe ele interrompe a execução e
-    # verifica se o DNS está configurado.
-    ping 8.8.8.8 -c4 &> /dev/null
+    ping 8.8.8.8 -c2 &> /dev/null
     case $? in
-        0) return 0
+        0)
+            return 0
         ;;
-        1)  vermelho "O teste de ping falhou para o endereço DNS do Google (8.8.8.8)"
+        1)
+            textoVermelho "Teste de conexão falhou. Endereço 8.8.8.8 não alcançado."
             cat /etc/resolv.conf | grep nameserver | cut -d" " -f2 > /tmp/dns
             DNS=$(ls -l /tmp/dns | awk '{print $5}')
             if [ $DNS -eq 0 ] 
             then
-                branco "Dica: não identificamos o DNS configurado. Configure e tente novamente."
+                textoBranco "Dica: não identificamos o DNS configurado. Configure e tente novamente."
                 sleep 5
                 rm -rf /tmp/dns
             fi
-            branco "Encerrando configuração."
+            textoBranco "Encerrando configuração, até logo!"
             sleep 5
             return 1
         ;;
-        *)  vermelho "Um erro inesperado aconteceu efetuando o teste de ping para o endereço configurado para teste."
+        *)
+            textoVermelho "Um retorno não catalogado ocorreu, contate o administrador: rafael.bardini@outlook.com"
             sleep 5
             return 1
         ;;
     esac
 }
 
+# Função verificarUsuario é responsável por validar o UID do usuário, sendo necessário ser 0 (root).
 function verificarUsuario()
 {
-    # Esse script foi desenvolvido para administradores de sistemas, por conta disso deve ser executado
-    # apenas com o super usuário do sistema (root).
-    if [ $UID -eq 0 ] 
+    if [ $UID -eq 0 ]
     then
         return 0
     else
-        vermelho "O script só pode ser executado com o super usuário (root)."
+        textoVermelho "O script só deve ser executado com o usuário root. Encerrando configuração."
         return 1
     fi
 }
 
+# Função configurarHostname é responsável por realizar a alteração do hostname, é necessário
+# que o nome informado não possua caracteres especiais, sendo eles: "!@/\#$%^&*()_+".
 function configurarHostname()
 {
-    # A função realiza a alteração do hostname da máquina desde que o nome inserido não tenha caracteres
-    # especiais.
     readBranco "Digite o nome que deseja colocar para o dispositivo: "
     read NOMEMAQUINA
     if [[ $NOMEMAQUINA =~ ['!@/\#$%^&*()_+'] ]] 
@@ -120,30 +118,37 @@ function configurarHostname()
     fi
 }
 
-function gerenciadorPacotes()
+# Função definirGerenciadorPacotes realiza a coleta da versão para definir se o gerenciador
+# de pacotes que será utilizado é yum ou dnf.
+function definirGerenciadorPacotes()
 {
     VERSAO=$(cat /etc/os-release | grep VERSION_ID | cut -d'"' -f2 | cut -d'.' -f1)
     case $VERSAO in
-        7)  GERENCIADOR=yum
+        7)
+            GERENCIADOR=yum
             return 0
         ;;
-        8)  GERENCIADOR=dnf
+        8)
+            GERENCIADOR=dnf
             return 0
         ;;
-        9)  GERENCIADOR=dnf
+        9)
+            GERENCIADOR=dnf
             return 0
         ;;
-        *)  vermelho "Não foi possível definir a versão utilizando o arquivo /etc/os-release."
-            branco "Dica: verifique se a versão que está entre as versões compatíveis: RHEL (7, 8, 9) | CentOS (7, 8 e 9) | RockyLinux (7, 8 e 9)"
+        *)
+            textoVermelho "Não foi possível definir a versão utilizando o arquivo /etc/os-release."
+            textoBranco "Dica: verifique se a versão que está entre as versões compatíveis: RHEL (7, 8, 9) | CentOS (7, 8 e 9) | RockyLinux (7, 8 e 9)"
             return 1
     esac
     
 }
 
+# Função instalarUtilitarios realiza a instalação de ferramentas úteis para o servidor, ela
+# só deve ser executada desde que a validação feita pela função definirGerenciadorPacotes tenha
+# sido bem sucedida.
 function instalarUtilitarios()
 {
-    # Função que será responsável por gerir os pacotes que serão instalados.
-    # Essa função só deve ser chamada caso a função gerenciadorPacotes retorne 0.
     $GERENCIADOR update -y && \
     $GERENCIADOR install -y mlocate \
                             curl \
@@ -154,7 +159,7 @@ function instalarUtilitarios()
                             sysstat \
                             perl \
                             firewalld
-    if [ $? -eq 0 ] 
+    if [ $? -eq 0 ]
     then
         return 0
     else
@@ -162,35 +167,32 @@ function instalarUtilitarios()
     fi
 }
 
-function particoesSistema()
+# Função verificarParticao realiza a validação da existência de partições nomeadas
+# /data ou /dados criadas geralmente na instalação.
+function verificarParticao()
 {
-    # O código abaixo testa a existência de partições chamadas data ou dados.
-    # O retorno 0 corresponde a existência dessas partições, já o retorno 1 corresponde a ausência delas.
-    if [ 1 -eq 1 ] 
+    df -h | grep /dados | awk '{print $6}' > /tmp/particao
+    PARTICAO=$(ls -l /tmp/particao | awk '{print $5}')
+    if [ $PARTICAO -gt 0 ] 
     then
-        df -h | grep /dados | awk '{print $6}' > /tmp/particao
+        return 0
+    elif [ $PARTICAO -eq 0 ]
+    then
+        df -h | grep /data | awk '{print $6}' > /tmp/particao
         PARTICAO=$(ls -l /tmp/particao | awk '{print $5}')
         if [ $PARTICAO -gt 0 ]
         then
             return 0
-        elif [ $PARTICAO -eq 0 ] 
-        then
-            df -h | grep /data | awk '{print $6}' > /tmp/particao
-            PARTICAO=$(ls -l /tmp/particao | awk '{print $5}')
-            if [ $PARTICAO -gt 0 ]
-            then
-                return 0
-            else
-                return 1
-            fi
         fi
+    else
+        return 1
     fi
 }
 
+# Função instalarPostgres utiliza informações obtidas através da função definirGerenciadorPacotes,
+# logo só deve ser chamada caso tenha obtido um retorno bem sucedido da mesma.
 function instalarPostgres()
 {
-    # Instalação do PostgreSQL 12.
-    # Essa função só pode ser chamada caso o retorno da gerenciadorPacotes seja 0.
     $GERENCIADOR install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$VERSAO-x86_64/pgdg-redhat-repo-latest.noarch.rpm
     if [ $VERSAO -gt 7 ]
     then
@@ -198,27 +200,22 @@ function instalarPostgres()
     fi
     $GERENCIADOR install -y postgresql12-server \
                             postgresql12-contrib
-    # A função chamada aqui verifica a existência de partições de dados personalizadas
-    # caso ele encontre /data ou /dados, utilizará elas para realizar a instalação do
-    # cluster PostgreSQL.
-    particoesSistema
+    verificarParticao
     if [ $? -eq 0 ]
     then
         DIRETORIO=$(cat /tmp/particao)
         mkdir -p $DIRETORIO/pgsql/12/main
         chown -R postgres:postgres $DIRETORIO/pgsql
         chmod -R 770 $DIRETORIO/pgsql
-        mkdir /etc/systemd/system/postgresql-12.service.d
+        mkdir -p /etc/systemd/system/postgresql-12.service.d
         echo -e "[Service]\nEnvironment=PGDATA=$DIRETORIO/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
         clear
-        azul "Inicializando o banco de dados..."
+        textoAzul "Inicializando o banco de dados..."
         sleep 5
         /usr/pgsql-12/bin/postgresql-12-setup initdb
         systemctl enable --now postgresql-12
         return 0
     else
-        # Caso ele não encontre a partição /data ou /dados ele disponibiliza que seja personalizado
-        # o local da instalação.
         menuInstalarPostgres
         if [ $? -eq 0 ] 
         then
@@ -231,33 +228,35 @@ function instalarPostgres()
     fi
 }
 
+# Função menuInstalarPostgres é chamada caso não seja identificada a existência de "/data" ou "/dados".
 function menuInstalarPostgres()
 {
-    # Esse menu é chamado durante a instalação do PostgreSQL caso não encontre a partição /dados ou /data,
-    # ele possibilita que seja personalizado o diretório de criação do cluster.
-    vermelho "Partição data ou dados não encontrada."
-    branco "1. Instalação padrão do PostgreSQL;"
-    branco "2. Instalar em /home;"
-    branco "3. Personalizar um diretório na raiz;"
-    branco "4. Sair."
+    textoVermelho "Partição data / dados não encontrada."
+    textoBranco "1. Instalação padrão PostgreSQL (/var);"
+    textoBranco "2. Instalação na raiz de usuários (/home);"
+    textoBranco "3. Personalizar partição/diretório na raiz;"
+    textoBranco "4. Sair."
     readBranco "Selecione uma das opções acima: "
     read OPC
     case $OPC in
-        1) return 0
+        1)
+            return 0
         ;;
-        2)  mkdir -p /home/pgsql/12/main
+        2)
+            mkdir -p /home/pgsql/12/main
             chown -R postgres:postgres /home/pgsql
             chmod -R 770 /home/pgsql
-            mkdir /etc/systemd/system/postgresql-12.service.d
+            mkdir -p /etc/systemd/system/postgresql-12.service.d
             echo -e "[Service]\nEnvironment=PGDATA=/home/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
             clear
             return 0
         ;;
-        3)  readBranco "Digite apenas o nome do diretório na raiz sem caracteres especiais: "
+        3)
+            readBranco "Digite apenas o nome da partição/diretório na raiz sem caracteres especiais: "
             read DIRETORIO
             if [[ $DIRETORIO =~ ['!@/\#$%^&*()_+'] ]] 
             then
-                vermelho "Nome inválido."
+                textoVermelho "Nome inválido."
                 sleep 5
                 menuInstalarPostgres
             else
@@ -265,36 +264,32 @@ function menuInstalarPostgres()
                 mkdir -p $DIRETORIO/pgsql/12/main
                 chown -R postgres:postgres $DIRETORIO/pgsql
                 chmod -R 770 $DIRETORIO/pgsql
-                mkdir /etc/systemd/system/postgresql-12.service.d
                 echo -e "[Service]\nEnvironment=PGDATA=$DIRETORIO/pgsql/12/main" | tee -a /etc/systemd/system/postgresql-12.service.d/override.conf
                 clear
                 return 0
             fi
         ;;
-        4)  return 1
-            break
+        4)
+            return 1
         ;;
-        *)  vermelho "Opção inválida."
+        *)
+            textoVermelho "Opção inválida."
             sleep 5
             menuInstalarPostgres
     esac
 }
 
+# Função tunningConfiguracaoPostgres realiza as alterações de tunning baseadas no hardware encontrado.
 function tunningConfiguracaoPostgres()
 {
-    # Função responsável por realizar o tunning das configurações do PostgreSQL com basendo-se no hardware.
-    # Informações de hardware.
     PORTA=$1
     TIPODISCO=$(cat /sys/block/sda/queue/rotational)
     CPUS=$(lscpu | grep 'CPU(s):' | head -n1 | awk '{print $2}')
     MEMORIACONVERTIDAKB=$(cat /proc/meminfo | grep MemTotal | grep -o '[0-9]*')
-    # Configuração de parâmetros baseados nas recomendações da documentação.
     SHARED_BUFFERS=$(($MEMORIACONVERTIDAKB/8/4))
     CACHE_SIZE=$(($MEMORIACONVERTIDAKB/8/4*3))
     MAINTANANCE_MEM=$(($MEMORIACONVERTIDAKB/8/8))
     MAX_PARALLEL_WORKERS=$(($CPUS/2))
-    # Parâmetros maleáveis de acordo com o tipo de hardware precisam da verificação abaixo para
-    # que o tunning seja preciso.
     if [ $MAX_PARALLEL_WORKERS > 4 ] 
     then
         MAX_PARALLEL_WORKERS=4
@@ -307,7 +302,6 @@ function tunningConfiguracaoPostgres()
         IO=200
         PAGE_COST=1.1
     fi
-    # Criação do arquivo de source.
     echo "PORTA=$PORTA" | tee -a /tmp/infotunning
     echo "TIPODISCO=$TIPODISCO" | tee -a /tmp/infotunning
     echo "CPUS=$CPUS" | tee -a /tmp/infotunning
@@ -320,10 +314,6 @@ function tunningConfiguracaoPostgres()
     echo "PAGE_COST=$PAGE_COST" | tee -a /tmp/infotunning
     echo '"*"' > /tmp/alladdress
     clear
-    # Os comandos abaixo realizam a alteração através do metacomando "ALTER SYSTEM" do PostgreSQL.
-    # Eles ficam disponíveis para serem consultados no arquivo postgresql.auto.conf ou até mesmo na
-    # view especial do PostgreSQL pg_settings.
-    # Caso seja necessário é possível desfazer as alterações utilizando o "ALTER SYSTEM RESET ALL".
     runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "ALTER SYSTEM SET shared_buffers = $SHARED_BUFFERS;"'
     runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "ALTER SYSTEM SET effective_cache_size = $CACHE_SIZE;"'
     runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "ALTER SYSTEM SET maintenance_work_mem = $MAINTANANCE_MEM;"'
@@ -350,10 +340,10 @@ function tunningConfiguracaoPostgres()
     systemctl restart postgresql-12
 }
 
+# Função alterarHostBasedAuth é responsável por realizar a alteração no arquivo "pg_hba.conf" com a rede 
+# identificada, o padrão é adicionar o barramento "/16".
 function alterarHostBasedAuth()
 {
-    # Função responsável por identificar as redes da máquina e realizar a autorização no arquivo pg_hba.conf
-    # utilizando o método md5.
     PORTA=$1
     echo "PORTA=$PORTA" | tee -a /tmp/porta
     clear
@@ -363,26 +353,25 @@ function alterarHostBasedAuth()
     if [ $REDES -gt 2 ]; then
         while [ $CONTADOR -lt $REDES ]; do
             IPADDRESS=$(hostname -I | sed 's/ /\n/g' | sed -n "$CONTADOR p")
-		    echo -e "host\tall\t\tall\t\t$IPADDRESS/24\t\tmd5" >> $DIRETORIODATA
+		    echo -e "host\tall\t\tall\t\t$IPADDRESS/16\t\tmd5" >> $DIRETORIODATA
 		    LAST_IP=$(tail -n1 $DIRETORIODATA | cut -d . -f 4)
-		    ALTER_IP=$(echo -e "0/24\t\tmd5")
+		    ALTER_IP=$(echo -e "0/16\t\tmd5")
 		    sed -i "s|$LAST_IP|$ALTER_IP|g" $DIRETORIODATA
 		    CONTADOR=$(($CONTADOR+1))
         done
     else
 	    IPADDRESS=$(hostname -I | sed 's/ /\n/g' | sed -n "$CONTADOR p")
-	    echo -e "host\tall\t\tall\t\t$IPADDRESS/24\t\tmd5" >> $DIRETORIODATA
+	    echo -e "host\tall\t\tall\t\t$IPADDRESS/16\t\tmd5" >> $DIRETORIODATA
 	    LAST_IP=$(tail -n1 $DIRETORIODATA | cut -d . -f 4)
-	    ALTER_IP=$(echo -e "0/24\t\tmd5")
+	    ALTER_IP=$(echo -e "0/16\t\tmd5")
 	    sed -i "s|$LAST_IP|$ALTER_IP|g" $DIRETORIODATA
     fi
 }
 
+# Função instalarMonitoramentoPostgres é responsável por realizar o download do binário já compilado
+# do pgBadger (log analyzer).
 function instalarMonitoramentoPostgres()
 {
-    # Instalação do pgBadger e da ferramenta para envio de e-mail, uma ferramenta de monitoramento pontual.
-    # A instalação dessa ferramenta é opcional, por conta disso propositalmente o arquivo .variables_badger
-    # deve ser preenchido manualmente.
     mkdir /pg_badger
     $GERENCIADOR update -y
     $GERENCIADOR install -y git
@@ -398,10 +387,10 @@ function instalarMonitoramentoPostgres()
     git clone https://github.com/rbsilmann/pg-badger.git /pg_badger
 }
 
+# Função configurarSamba adiciona um usuário e um grupo de segurança para realizar o compartilhamento
+# public e a sub-pasta backup protegida com usuário e senha.
 function configurarSamba()
 {
-    # Função responsável por realizar a criação do compartilhamento público e restringir o acesso
-    # a pasta de backup somente para o usuário criado.
     PADRAOBACKUP=B4ckup@Software
     groupadd vrsamba
     useradd vrsoftware
@@ -422,23 +411,29 @@ function configurarSamba()
     fi
 }
 
+# Função configurarFirewall realiza a alteração para o perfil "work" e adiciona os serviços necessários
+# nas exceções de firewall.
 function configurarFirewall()
 {
-    # Configuração de firewall alterando o perfil para ambiente corporativo e adicionando os serviços: samba
-    # e do PostgreSQL nas exceções
-    ciano "Configurando zona padrão: "
+    textoCiano "Configurando zona padrão: "
     firewall-cmd --set-default-zone=work
     sleep 2
-    ciano "Configurando serviço samba: "
+    textoCiano "Configurando serviço SSH: "
+    firewall-cmd --add-service=ssh --permanent
+    sleep 2
+    textoCiano "Configurando serviço Cockpit: "
+    firewall-cmd --add-service=cockpit --permanent
+    sleep 2
+    textoCiano "Configurando serviço samba: "
     firewall-cmd --add-service=samba --permanent
     sleep 2
-    ciano "Configurando serviço PostgreSQL: "
+    textoCiano "Configurando serviço PostgreSQL: "
     firewall-cmd --add-service=postgresql --permanent
     sleep 2
-    ciano "Recarregando firewalld: "
+    textoCiano "Recarregando firewalld: "
     firewall-cmd --reload
     sleep 2
-    ciano "Habilitando inicialização automática SMB e NMB: "
+    textoCiano "Habilitando inicialização automática SMB e NMB: "
     sleep 2
     systemctl enable smb nmb firewalld
     systemctl restart smb nmb firewalld
@@ -450,13 +445,15 @@ function configurarFirewall()
     fi
 }
 
+# Função alterarPorta é responsável por modificar o arquivo "postgresql.conf" alterando o valor default
+# para 8745, essa alteração não é feita via ALTER SYSTEM para que seja fácil identificar a porta em que
+# o banco de dados está rodando pelo arquivo padrão.
 function alterarPorta()
 {
-    # Essa função recebe um parâmetro para realizar a troca da porta padrão, ela atua somente quando o arquivo postgresql.conf
-    # não sofreu nenhuma alteração.
     PORTA=$1
-    sed -i "/#port/s/5432/$PORTA/g" $DIRETORIO/pgsql/12/main/postgresql.conf
-    sed -i "/#port/s/#port/port/g" $DIRETORIO/pgsql/12/main/postgresql.conf
+    DIRETORIODATA=$(runuser -l postgres -c 'source /tmp/porta && /usr/pgsql-12/bin/psql -p $PORTA -c "SELECT setting FROM pg_settings"' | grep postgresql.conf)
+    sed -i "/#port/s/5432/$PORTA/g" $DIRETORIODATA/postgresql.conf
+    sed -i "/#port/s/#port/port/g" $DIRETORIODATA/postgresql.conf
     if [ $? -eq 0 ] 
     then
         return 0
@@ -466,6 +463,7 @@ function alterarPorta()
     systemctl restart postgresql-12
 }
 
+# Função criarRoles cria alguns objetos no banco de dados.
 function criarRoles()
 {
     runuser -l postgres -c 'source /tmp/infotunning && /usr/pgsql-12/bin/psql -p $PORTA -c "CREATE DATABASE vr;"'
@@ -490,70 +488,67 @@ function criarRoles()
     fi
 }
 
+# Função instalacaoPadrao realiza é chamada no menu de opções através da opção 1.
+# Nessa função o espaçamento entre as linhas refere-se aos blocos lógicos.
 function instalacaoPadrao()
 {
-    # A instalação padrão gera um relatório de sucessos e falhas em /tmp/relatorio_instalacao.txt
-    # 01 - Boas-vindas.
-    amarelo "Olá, bem vindo ao assistente de configuração!"
-    sleep 5
-    branco "O assistente se encarregará de auxiliar nas seguintes configurações:"
-    branco "- Instalação/configuração do SGBD PostgreSQL e pgBadger"
-    branco "- Instalação/configuração do samba"
-    branco "- Instalação de utilitários básicos"
-    branco "- Liberações de firewall"
-    sleep 10
-    # 01
-    #
-    # 02 - Validações iniciais.
     clear
-    azul "Inicialmente vamos validar se há acesso com a internet, beleza?"
+    textoAmarelo "Olá, bem-vindo ao assistente de configuração!"
+    sleep 5
+    textoBranco "O assistente se encarregará de auxiliar nas seguintes configurações:"
+    textoBranco "- Instalação/configuração do SGBD PostgreSQL e pgBadger"
+    textoBranco "- Instalação/configuração do samba"
+    textoBranco "- Instalação de utilitários básicos"
+    textoBranco "- Liberações de firewall"
+    sleep 10
+    #
+    clear
+    textoAzul "Inicialmente vamos validar se há acesso com a internet, beleza?"
     sleep 2
-    testeConexao
+    testarConexao
     if [ $? -eq 0 ] 
     then
-        verde "Tudo certo com a sua conexão! =D"
-        echo "Conexão com a internet: OK" > /tmp/relatorio_instalacao.txt
+        textoVerde "Tudo certo com a sua conexão! =D"
+        echo "Conexão com a internet (ping 8.8.8.8): OK" > /tmp/relatorio_instalacao.txt
     else
-        echo "Conexão com a internet: FALHOU" > /tmp/relatorio_instalacao.txt
+        echo "Conexão com a internet (ping 8.8.8.8): FALHOU" > /tmp/relatorio_instalacao.txt
     fi
-    azul "Agora validaremos a permissão do usuário conectado."
+    textoAzul "Agora validaremos a permissão do usuário conectado."
     sleep 5
     verificarUsuario
     if [ $? -eq 0 ]
     then
-        verde "Tudo certo também com o seu usuário! =)"
-        echo "Validação de usuário: OK" >> /tmp/relatorio_instalacao.txt
+        textoVerde "Tudo certo também com o seu usuário! =)"
+        echo "Validação de usuário (root): OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
     else
-        echo "Validação de usuário: FALHOU" >> /tmp/relatorio_instalacao.txt
+        echo "Validação de usuário (root): FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
         exit
     fi
-    # 02
-    #
-    # 03 - Início da instalação
     configurarHostname
     if [ $? -eq 0 ]
     then
-        verde "Hostname configurado com sucesso!"
+        textoVerde "Hostname configurado com sucesso!"
         echo "Configuração de hostname: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
     else
-        vermelho "Falha ao configurar o novo hostname. Caracteres especiais identificados."
+        textoVermelho "Falha ao configurar o novo hostname. Caracteres especiais identificados."
         echo "Configuração de hostname: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
+    #
     clear
-    azul "Iniciando a instalação dos componentes necessários."
+    textoAzul "Iniciando a instalação dos componentes necessários."
     sleep 5
-    gerenciadorPacotes
+    definirGerenciadorPacotes
     if [ $? -eq 0 ]
     then
-        verde "Sistema operacional compatível com o script!"
-        echo "Sistema compatível: OK" >> /tmp/relatorio_instalacao.txt
+        textoVerde "Sistema operacional compatível com o script!"
+        echo "Sistema operacional compatível: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
     else
-        echo "Sistema compatível: FALHOU" >> /tmp/relatorio_instalacao.txt
+        echo "Sistema operacional compatível: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
         exit
     fi
@@ -566,20 +561,18 @@ function instalacaoPadrao()
         echo "Instalação de pré-requisitos: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
-    # 03
     #
-    # 04 - Início das instalações/configurações do PostgreSQL e samba.
     clear
-    azul "Iniciando a instalação do PostgreSQL 12..."
+    textoAzul "Iniciando a instalação do PostgreSQL 12..."
     sleep 5
     instalarPostgres
     if [ $? -eq 0 ]
     then
-        verde "Instalação do PostgreSQL realizada corretamente."
+        textoVerde "Instalação do PostgreSQL realizada corretamente."
         echo "Instalação do PostgreSQL: OK" >> /tmp/relatorio_instalacao.txt
         sleep 5
         clear
-        azul "Aguarde enquanto ajustamos o tunning."
+        textoAzul "Aguarde enquanto ajustamos o tunning."
         sleep 5
         tunningConfiguracaoPostgres 5432
         if [ $? -eq 0 ]
@@ -589,7 +582,7 @@ function instalacaoPadrao()
             echo "Tunning do PostgreSQL: FALHOU" >> /tmp/relatorio_instalacao.txt
         fi
         clear
-        azul "Criando database inicial e roles..."
+        textoAzul "Criando database inicial e roles..."
         criarRoles
         if [ $? -eq 0 ]
         then
@@ -612,9 +605,7 @@ function instalacaoPadrao()
         echo "Configuração do SAMBA: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
-    # 04
     #
-    # 05 - Ajustes finais.
     instalarMonitoramentoPostgres
     if [ $? -eq 0 ]
     then
@@ -624,6 +615,7 @@ function instalacaoPadrao()
         echo "Instalação do pgBadger: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
+    #
     clear
     configurarFirewall
     if [ $? -eq 0 ]
@@ -634,6 +626,7 @@ function instalacaoPadrao()
         echo "Configuração de firewall: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
+    #
     alterarHostBasedAuth 5432
     if [ $? -eq 0 ]
     then
@@ -652,19 +645,20 @@ function instalacaoPadrao()
         echo "Configuração do porta: FALHOU" >> /tmp/relatorio_instalacao.txt
         sleep 5
     fi
-    # 05
 }
 
+# Função menuConfiguracao é responsável por centralizar a chamada das funções dependendo da opção
+# escolhida.
 function menuConfiguracao()
 {
     clear
-    preto "MENU"
-    azul "| 1. Instalação completa (PostgreSQL, Tunning, adição de liberações HBA, Samba);"
-    ciano "| 2. PostgreSQL;"
-    amarelo "| 3. Tunning;"
-    branco "| 4. Liberações HBA;"
-    purple "| 5. Instalação do Samba;"
-    vermelho "| 6. Sair."
+    textoPreto "MENU"
+    textoAzul "| 1. Instalação completa (PostgreSQL, Tunning, adição de liberações HBA, Samba);"
+    textoCiano "| 2. PostgreSQL;"
+    textoAmarelo "| 3. Tunning;"
+    textoBranco "| 4. Liberações HBA;"
+    textoPurpura "| 5. Instalação do Samba;"
+    textoVermelho "| 6. Sair."
     readBranco "Selecione a opção desejada: "
     read MENU
     case $MENU in
@@ -676,21 +670,21 @@ function menuConfiguracao()
             verificarUsuario
             if [ $? -ne 0 ] 
             then
-                vermelho "É necessário que você execute essa função como root."
+                textoVermelho "É necessário que você execute essa função como root."
                 sleep 5
                 exit
             fi
-            gerenciadorPacotes
+            definirGerenciadorPacotes
             if [ $? -eq 0 ] 
             then
                 clear
                 instalarPostgres
                 clear
-                verde "PostgreSQL instalado com sucesso! =)"
+                textoVerde "PostgreSQL instalado com sucesso! =)"
                 sleep 5
             else
                 clear
-                vermelho "Falha ao instalar o PostgreSQL, não foi possível definir o gerenciador de pacotes."
+                textoVermelho "Falha ao instalar o PostgreSQL, não foi possível definir o gerenciador de pacotes."
                 sleep 5
             fi
             menuConfiguracao
@@ -699,7 +693,7 @@ function menuConfiguracao()
             verificarUsuario
             if [ $? -ne 0 ] 
             then
-                vermelho "É necessário que você execute essa função como root."
+                textoVermelho "É necessário que você execute essa função como root."
                 sleep 5
                 exit
             fi
@@ -708,10 +702,10 @@ function menuConfiguracao()
             tunningConfiguracaoPostgres $PORTA
             if [ $? -eq 0 ] 
             then
-                verde "Tunning realizado com sucesso."
+                textoVerde "Tunning realizado com sucesso."
                 sleep 5
             else
-                vermelho "Tunning falhou, verifique a porta informada! Porta informada: $PORTA"
+                textoVermelho "Tunning falhou, verifique a porta informada! Porta informada: $PORTA"
                 sleep 5
             fi
             menuConfiguracao
@@ -720,7 +714,7 @@ function menuConfiguracao()
             verificarUsuario
             if [ $? -ne 0 ] 
             then
-                vermelho "É necessário que você execute essa função como root."
+                textoVermelho "É necessário que você execute essa função como root."
                 sleep 5
                 exit
             fi
@@ -729,11 +723,11 @@ function menuConfiguracao()
             alterarHostBasedAuth $PORTA
             if [ $? -ne 0 ] 
             then
-                vermelho "Não foi possível adicionar informações no HBA, verifique a interface de rede."
+                textoVermelho "Não foi possível adicionar informações no HBA, verifique a interface de rede."
                 sleep 5
                 exit
             else
-                verde "HBA configurado com sucesso, reinicie o serviço do PostgreSQL."
+                textoVerde "HBA configurado com sucesso, reinicie o serviço do PostgreSQL."
                 sleep 5
             fi
             menuConfiguracao
@@ -742,11 +736,11 @@ function menuConfiguracao()
             verificarUsuario
             if [ $? -ne 0 ] 
             then
-                vermelho "É necessário que você execute essa função como root."
+                textoVermelho "É necessário que você execute essa função como root."
                 sleep 5
                 exit
             fi
-            gerenciadorPacotes
+            definirGerenciadorPacotes
             if [ $? -eq 0 ] 
             then
                 clear
@@ -758,18 +752,18 @@ function menuConfiguracao()
                 fi
             else
                 clear
-                vermelho "Falha ao instalar o samba, não foi possível definir o gerenciador de pacotes."
+                textoVermelho "Falha ao instalar o samba, não foi possível definir o gerenciador de pacotes."
                 sleep 5
             fi
             menuConfiguracao
         ;;
         6)  echo ""
-            vermelho "Saindo do agente de configuração, até logo! =)"
+            textoVermelho "Saindo do agente de configuração, até logo! =)"
             sleep 5
             exit
         ;;
         *)  clear
-            vermelho "Opção inválida!!!"
+            textoVermelho "Opção inválida!!!"
             sleep 15
             menuConfiguracao
     esac
